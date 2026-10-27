@@ -282,10 +282,10 @@ index 116367d..15736e9 100644
  _SecTrustCopyDetailedPropertiesAtIndex
  _SecTrustCopyExceptions
 diff --git a/OSX/sec/Security/SecTrust.c b/OSX/sec/Security/SecTrust.c
-index ee5aea2..ee01bbf 100644
+index ee5aea2..7d7e78e 100644
 --- a/OSX/sec/Security/SecTrust.c
 +++ b/OSX/sec/Security/SecTrust.c
-@@ -1918,6 +1918,21 @@ SecCertificateRef SecTrustGetCertificateAtIndex(SecTrustRef trust,
+@@ -1918,6 +1918,20 @@ SecCertificateRef SecTrustGetCertificateAtIndex(SecTrustRef trust,
      return cert;
  }
  
@@ -293,14 +293,13 @@ index ee5aea2..ee01bbf 100644
 +    if (!trust) {
 +        return NULL;
 +    }
-+    CFIndex count = SecTrustGetCertificateCount(trust);
-+    CFMutableArrayRef chain = CFArrayCreateMutable(kCFAllocatorDefault, count, &kCFTypeArrayCallBacks);
-+    for (CFIndex ix = 0; ix < count; ++ix) {
-+        SecCertificateRef cert = SecTrustGetCertificateAtIndex(trust, ix);
-+        if (cert) {
-+            CFArrayAppendValue(chain, cert);
++    SecTrustEvaluateIfNecessary(trust);
++    __block CFArrayRef chain = NULL;
++    dispatch_sync(trust->_trustQueue, ^{
++        if (trust->_chain) {
++            chain = CFArrayCreateCopy(kCFAllocatorDefault, trust->_chain);
 +        }
-+    }
++    });
 +    return chain;
 +}
 +

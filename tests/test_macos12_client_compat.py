@@ -42,6 +42,16 @@ class ManifestTests(unittest.TestCase):
                 self.assertIn(name, component['new_files'])
                 self.assertIn(f'diff --git a/{name} b/{name}\n', patch)
 
+    def test_every_file_a_patch_creates_is_listed(self):
+        manifest = json.loads((ROOT / 'upstream/manifest.json').read_text())
+        for component in manifest['components']:
+            patch = ROOT / component['patch']
+            if not patch.exists():
+                continue
+            created = re.findall(r'^diff --git a/(\S+) b/\S+\nnew file mode', patch.read_text(), re.M)
+            listed = set(component.get('new_files', []))
+            self.assertEqual([name for name in created if name not in listed], [], component['path'])
+
 
 class SymbolTests(unittest.TestCase):
     def test_constant_literal_classes_are_defined(self):

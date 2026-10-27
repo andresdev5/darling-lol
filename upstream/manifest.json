@@ -41,7 +41,9 @@
         "src/frameworks/MediaPlayer/CMakeLists.txt",
         "src/frameworks/MediaPlayer/src/MediaPlayer.m",
         "src/frameworks/QuickLookUI/CMakeLists.txt",
-        "src/frameworks/VideoToolbox/src/VideoToolboxAdditions.c"
+        "src/frameworks/VideoToolbox/src/VideoToolboxAdditions.c",
+        "src/frameworks/Accelerate/vecLib/vDSP/src/arith.c",
+        "src/frameworks/Accelerate/vecLib/vDSP/src/fft.c"
       ]
     },
     {
@@ -82,7 +84,8 @@
         "AppKit/NSImageSymbolConfiguration.m",
         "CoreGraphics/CGColorSpaceSRGBProfile.inc",
         "CoreGraphics/CGCompatibility.m",
-        "QuartzCore/CAEDRMetadata.m"
+        "QuartzCore/CAEDRMetadata.m",
+        "AppKit/X11.backend/X11RelativeMouse.h"
       ]
     },
     {

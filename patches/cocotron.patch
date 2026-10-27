@@ -1730,7 +1730,7 @@ index c3f5d056..dbd93174 100644
          @"NSTouchBarItemIdentifierCharacterPicker";
  
 diff --git a/AppKit/NSView.m b/AppKit/NSView.m
-index 8ac2bbd..33f9377 100644
+index 8ac2bbd..2af5934 100644
 --- a/AppKit/NSView.m
 +++ b/AppKit/NSView.m
 @@ -46,6 +46,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
@@ -1971,7 +1971,7 @@ index 8ac2bbd..33f9377 100644
  }
  
  - (BOOL) performDragOperation: (id<NSDraggingInfo>) sender {
-@@ -2926,4 +3037,28 @@ static NSView *viewBeingPrinted = nil;
+@@ -2926,4 +3037,34 @@ static NSView *viewBeingPrinted = nil;
      }
  }
  
@@ -1986,7 +1986,13 @@ index 8ac2bbd..33f9377 100644
 +
 +- (NSAppearance *) effectiveAppearance {
 +    NSAppearance *appearance = [self appearance];
-+    return appearance != nil ? appearance : [NSAppearance currentDrawingAppearance];
++    if (appearance != nil)
++        return appearance;
++    if (_superview != nil)
++        return [_superview effectiveAppearance];
++    if (_window != nil)
++        return [_window effectiveAppearance];
++    return NSApp != nil ? [NSApp effectiveAppearance] : [NSAppearance currentDrawingAppearance];
 +}
 +
 +- (NSEdgeInsets) safeAreaInsets {
@@ -2001,7 +2007,7 @@ index 8ac2bbd..33f9377 100644
 +
  @end
 diff --git a/AppKit/NSWindow.m b/AppKit/NSWindow.m
-index d545120..14f0fd2 100644
+index d545120..e159638 100644
 --- a/AppKit/NSWindow.m
 +++ b/AppKit/NSWindow.m
 @@ -27,6 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
@@ -2910,7 +2916,7 @@ index d545120..14f0fd2 100644
  }
  
  + (BOOL) allowsAutomaticWindowTabbing {
-@@ -3470,6 +4070,38 @@ static BOOL _allowsAutomaticWindowTabbing;
+@@ -3470,6 +4070,40 @@ static BOOL _allowsAutomaticWindowTabbing;
      _allowsAutomaticWindowTabbing = allowsAutomaticWindowTabbing;
  }
  
@@ -2925,7 +2931,9 @@ index d545120..14f0fd2 100644
 +
 +- (NSAppearance *) effectiveAppearance {
 +    NSAppearance *appearance = [self appearance];
-+    return appearance != nil ? appearance : [NSAppearance currentDrawingAppearance];
++    if (appearance != nil)
++        return appearance;
++    return NSApp != nil ? [NSApp effectiveAppearance] : [NSAppearance currentDrawingAppearance];
 +}
 +
 +- (NSRect) contentLayoutRect {
@@ -12472,10 +12480,10 @@ index 0000000..edce6ae
 +
 +@end
 diff --git a/CoreGraphics/CGColor.m b/CoreGraphics/CGColor.m
-index 742f244..d18f83c 100644
+index 742f244..2868c2e 100644
 --- a/CoreGraphics/CGColor.m
 +++ b/CoreGraphics/CGColor.m
-@@ -55,6 +55,19 @@ CGColorRef CGColorCreateWithPattern(CGColorSpaceRef colorSpace,
+@@ -55,6 +55,34 @@ CGColorRef CGColorCreateWithPattern(CGColorSpaceRef colorSpace,
      return (CGColorRef)O2ColorCreateWithPattern((O2ColorSpaceRef)colorSpace, (O2PatternRef)pattern, components);
  }
  
@@ -12487,9 +12495,24 @@ index 742f244..d18f83c 100644
 +                                                   CGColorRenderingIntent intent,
 +                                                   CGColorRef color,
 +                                                   CFDictionaryRef options) {
-+    /* Colors are not converted between spaces; every RGB space renders as
-+     * device RGB. */
-+    return color != NULL ? CGColorCreateCopy(color) : NULL;
++    /* Every RGB space renders as device RGB, so only the color model is
++     * converted; components are not color managed. */
++    if (color == NULL || colorSpace == NULL)
++        return NULL;
++    CGColorSpaceModel from = CGColorSpaceGetModel(CGColorGetColorSpace(color));
++    CGColorSpaceModel to = CGColorSpaceGetModel(colorSpace);
++    const CGFloat *c = CGColorGetComponents(color);
++    if (from == to && (to == kCGColorSpaceModelMonochrome || to == kCGColorSpaceModelRGB || to == kCGColorSpaceModelCMYK))
++        return CGColorCreate(colorSpace, c);
++    if (from == kCGColorSpaceModelMonochrome && to == kCGColorSpaceModelRGB) {
++        CGFloat rgba[4] = { c[0], c[0], c[0], c[1] };
++        return CGColorCreate(colorSpace, rgba);
++    }
++    if (from == kCGColorSpaceModelRGB && to == kCGColorSpaceModelMonochrome) {
++        CGFloat gray[2] = { 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], c[3] };
++        return CGColorCreate(colorSpace, gray);
++    }
++    return NULL;
 +}
 +
  CGColorRef CGColorCreateCopy(CGColorRef self) {
